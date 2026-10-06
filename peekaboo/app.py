@@ -79,5 +79,37 @@ def graph_viz():
     return render_template("graph.html")
 
 
+@app.route("/dossier")
+def dossier():
+    """Full investigation dossier page."""
+    evidence_rows = db.list_all()
+    stats = graph.stats()
+    flags = detect_bad_actor_patterns(graph)
+    removal = [e for e in evidence_rows if e.get("notes") == "REMOVAL_REQUESTED"]
+
+    # Risk scores for all person nodes
+    risk_scores = []
+    for n, data in graph.graph.nodes(data=True):
+        if data.get("type") in ("person", "account", "email"):
+            r = calculate_risk_score(graph, n)
+            if r:
+                risk_scores.append(r)
+    risk_scores.sort(key=lambda x: x["risk_score"], reverse=True)
+
+    nodes_by_type = {}
+    for n, data in graph.graph.nodes(data=True):
+        t = data.get("type", "other")
+        nodes_by_type.setdefault(t, []).append((n, data))
+
+    return render_template("dossier.html",
+        evidence=evidence_rows,
+        stats=stats,
+        flags=flags,
+        removal=removal,
+        risk_scores=risk_scores,
+        nodes_by_type=nodes_by_type,
+    )
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

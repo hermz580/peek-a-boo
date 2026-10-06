@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Peek-a-Boo Investigation Dossier</title>
+<style>
+body{font-family:Arial,sans-serif;margin:20px;background:#111;color:#ddd;max-width:1200px;margin:auto;padding:20px}
+h1{color:#4ECDC4;border-bottom:1px solid #333;padding-bottom:8px}
+h2{color:#FF6B6B;margin-top:30px}
+h3{color:#45B7D1}
+.card{background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:16px;margin:12px 0}
+.stat-row{display:flex;gap:20px;flex-wrap:wrap}
+.stat{background:#16213e;padding:12px 20px;border-radius:6px;min-width:100px;text-align:center}
+.stat .num{font-size:28px;font-weight:bold;color:#4ECDC4}
+.stat .label{font-size:12px;color:#888}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:8px;border-bottom:1px solid #444;color:#4ECDC4}
+td{padding:8px;border-bottom:1px solid #222;font-size:13px}
+.flag{background:#2d1b1b;border-left:4px solid #ff4444;padding:10px;margin:8px 0;border-radius:4px}
+.flag-high{border-color:#ff8800}
+.flag-medium{border-color:#ffaa00}
+.risk-bar{height:8px;border-radius:4px;margin:4px 0}
+.risk-critical{background:#ff4444}
+.risk-high{background:#ff8800}
+.risk-medium{background:#ffaa00}
+.risk-low{background:#4ECDC4}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold}
+.badge-person{background:#FF6B6B;color:#111}
+.badge-account{background:#4ECDC4;color:#111}
+.badge-email{background:#45B7D1;color:#111}
+.badge-domain{background:#98D8C8;color:#111}
+.badge-ip{background:#F7DC6F;color:#111}
+a{color:#4ECDC4}
+.empty{color:#666;font-style:italic}
+</style>
+</head>
+<body>
+
+<h1>Peek-a-Boo Investigation Dossier</h1>
+<p>Generated: {{ now().strftime("%Y-%m-%d %H:%M UTC") if now is defined else "" }}</p>
+
+<!-- Graph Overview -->
+<h2>Graph Overview</h2>
+<div class="card">
+  <div class="stat-row">
+    <div class="stat"><div class="num">{{ stats.nodes }}</div><div class="label">Nodes</div></div>
+    <div class="stat"><div class="num">{{ stats.edges }}</div><div class="label">Edges</div></div>
+    {% for type_name, count in stats.node_types.items() %}
+    <div class="stat">
+      <div class="num">{{ count }}</div>
+      <div class="label"><span class="badge badge-{{ type_name }}">{{ type_name }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- All Nodes by Type -->
+<h2>Discovered Nodes</h2>
+<div class="card">
+  {% for type_name, nodes in nodes_by_type.items() %}
+  <h3><span class="badge badge-{{ type_name }}">{{ type_name|upper }}</span> ({{ nodes|length }})</h3>
+  <table>
+    <tr><th>ID</th><th>Data</th></tr>
+    {% for node_id, data in nodes %}
+    <tr>
+      <td><code>{{ node_id[:30] }}</code></td>
+      <td>{{ data|tojson(2) if data.items()|length > 0 else "—" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No nodes in graph. Run <code>peekaboo investigate</code> to add some.</p>
+  {% endfor %}
+</div>
+
+<!-- Evidence Cards -->
+<h2>Evidence Cards ({{ evidence|length }})</h2>
+<div class="card">
+  {% if evidence %}
+  <table>
+    <tr><th>#</th><th>Source URL</th><th>Excerpt</th><th>Relevance</th><th>Checked</th><th>Notes</th></tr>
+    {% for e in evidence %}
+    <tr>
+      <td>{{ e.id }}</td>
+      <td><a href="{{ e.source_url }}" target="_blank">{{ e.source_url[:50] }}...</a></td>
+      <td>{{ e.excerpt[:60] or "—" }}</td>
+      <td>{{ e.relevance or "—" }}</td>
+      <td>{{ e.date_checked[:10] }}</td>
+      <td>{{ e.notes[:20] or "—" }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No evidence cards. Use the evidence API to add some.</p>
+  {% endif %}
+</div>
+
+<!-- Bad-Actor Flags -->
+<h2>Bad-Actor Flags ({{ flags|length }})</h2>
+<div class="card">
+  {% if flags %}
+  {% for f in flags %}
+  <div class="flag flag-{{ f.severity|lower }}">
+    <strong>[{{ f.severity }}] {{ f.type }}</strong><br>
+    {{ f.reason }}<br>
+    <em>Indicator: {{ f.indicator[:50] }}</em>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty">No flags. Graph is clean.</p>
+  {% endif %}
+</div>
+
+<!-- Risk Scores -->
+<h2>Risk Scores</h2>
+<div class="card">
+  {% if risk_scores %}
+  {% for r in risk_scores %}
+  <div>
+    <strong>{{ r.node[:30] }}</strong>
+    <span class="badge badge-{{ r.risk_level|lower }}">{{ r.risk_score }}/100 ({{ r.risk_level }})</span>
+    <div class="risk-bar risk-{{ r.risk_level|lower }}" style="width:{{ r.risk_score }}%"></div>
+    {% for e in r.evidence %}<div style="color:#888;font-size:12px">— {{ e }}</div>{% endfor %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty">No risk scores computed.</p>
+  {% endif %}
+</div>
+
+<!-- Removal Tracker -->
+<h2>Removal Tracker ({{ removal|length }})</h2>
+<div class="card">
+  {% if removal %}
+  <table>
+    <tr><th>#</th><th>Source</th><th>Reason</th></tr>
+    {% for r in removal %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.source_url[:50] }}</td>
+      <td>{{ r.notes }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty">No items marked for removal.</p>
+  {% endif %}
+</div>
+
+<!-- Graph Link -->
+<div style="margin:30px 0">
+<a href="/graph-viz" style="background:#4ECDC4;color:#111;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">View Interactive Graph</a>
+<a href="/" style="margin-left:10px;color:#888">Dashboard</a>
+</div>
+
+</body>
+</html>
