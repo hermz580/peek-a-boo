@@ -11,10 +11,12 @@ from .db import EvidenceDB
 from .analysis import detect_bad_actor_patterns, calculate_risk_score, red2_campaign
 
 app = Flask(__name__)
-db = EvidenceDB()
-graph = OSINTGraph()
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+app.template_folder = TEMPLATE_DIR
+
+db = EvidenceDB()
+graph = OSINTGraph()
 
 
 @app.route("/")
