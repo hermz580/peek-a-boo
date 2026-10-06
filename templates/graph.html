@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head><title>Peek-a-Boo Graph View</title></head>
+<body style="margin:0;background:#222;">
+<div id="graph" style="width:100%;height:100vh;"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.6/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.6/dist/vis-network.min.css" />
+<script>
+// Graph data injected by pyvis
+var nodes = new vis.DataSet([]);
+var edges = new vis.DataSet([]);
+var container = document.getElementById('graph');
+var data = {nodes: nodes, edges: edges};
+var options = {
+  nodes: {shape: 'dot', font: {color: '#eee', size: 12}},
+  edges: {color: '#888', arrows: {to: {enabled: true}}},
+  physics: {enabled: true, solver: 'forceAtlas2Based'},
+  interaction: {hover: true, tooltipDelay: 200}
+};
+var network = new vis.Network(container, data, options);
+</script>
+</body>
+</html>

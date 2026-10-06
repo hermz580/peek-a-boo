@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+venv/
+osint.db
+*.egg-info/
+dist/
+build/
+.venv/
+**/__pycache__/
