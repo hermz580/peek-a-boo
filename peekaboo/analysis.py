@@ -1,4 +1,4 @@
-"""Bad-actor pattern detection, risk scoring, and Red2 campaign bridge."""
+"""Bad-actor pattern detection, verified indicators, and Red2 campaign bridge."""
 
 import os
 import json
@@ -86,23 +86,23 @@ def detect_bad_actor_patterns(osint_graph):
     return red_flags
 
 
-# ── Risk scoring ──
+# ── Verified indicators (no synthetic scoring) ──
 
-def calculate_risk_score(osint_graph, target_node_id):
-    """Generate a 0-100 risk score for a node based on graph patterns."""
+def collect_indicators(osint_graph, target_node_id):
+    """List indicators actually present in the graph data for a node.
+
+    No numeric score is produced: every entry is a fact observed in the data,
+    and an empty list means nothing was verified, not that the node is safe.
+    """
     if target_node_id not in osint_graph.graph:
         return None
 
-    score = 0
-    evidence = []
+    indicators = []
     target = dict(osint_graph.graph.nodes[target_node_id])
 
-    # +50: Found in breach database
     if target.get("in_breach"):
-        score += 50
-        evidence.append("Found in leaked database")
+        indicators.append("Found in leaked database")
 
-    # +30: Username reuse
     username = target.get("username", "")
     if username:
         account_nodes = [
@@ -110,44 +110,22 @@ def calculate_risk_score(osint_graph, target_node_id):
             if d.get("type") == "account" and d.get("username") == username
         ]
         if len(account_nodes) > 3:
-            score += 30
-            evidence.append(f"Username reused on {len(account_nodes)} platforms")
+            indicators.append(f"Username reused on {len(account_nodes)} platforms")
 
-    # +40: Multiple identities from same IP
     connections = osint_graph.find_all_connected(target_node_id, max_depth=2)
-    ip_count = len([
-        n for n, _d, _depth in connections
-        if osint_graph.graph.nodes[n].get("type") == "ip"
-    ])
-    identity_count = len([
-        n for n, _d, _depth in connections
-        if osint_graph.graph.nodes[n].get("type") in ("person", "email", "phone")
-    ])
+    ip_count = len([n for n, _d, _depth in connections
+                    if osint_graph.graph.nodes[n].get("type") == "ip"])
+    identity_count = len([n for n, _d, _depth in connections
+                          if osint_graph.graph.nodes[n].get("type") in ("person", "email", "phone")])
     if identity_count > 1 and ip_count > 1:
-        score += 40
-        evidence.append(f"{identity_count} identities from {ip_count} IPs — coordinated pattern")
+        indicators.append(f"{identity_count} identities linked to {ip_count} IPs")
 
-    # +20: Co-appears with flagged nodes
     if target.get("co_appears_with_flagged"):
-        score += 20
-        evidence.append("Co-appears with flagged bad actors")
-
-    # +15: VPN/proxy detected
+        indicators.append("Co-appears with flagged nodes")
     if target.get("vpn_detected"):
-        score += 15
-        evidence.append("Using VPN/proxy to mask IP")
+        indicators.append("VPN/proxy detected")
 
-    return {
-        "node": target_node_id,
-        "risk_score": min(score, 100),
-        "risk_level": (
-            "CRITICAL" if score >= 70 else
-            "HIGH" if score >= 50 else
-            "MEDIUM" if score >= 30 else
-            "LOW"
-        ),
-        "evidence": evidence,
-    }
+    return {"node": target_node_id, "indicators": indicators}
 
 
 # ── Red2 campaign bridge ──

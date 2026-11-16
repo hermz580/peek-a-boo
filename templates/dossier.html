@@ -19,11 +19,6 @@ td{padding:8px;border-bottom:1px solid #222;font-size:13px}
 .flag{background:#2d1b1b;border-left:4px solid #ff4444;padding:10px;margin:8px 0;border-radius:4px}
 .flag-high{border-color:#ff8800}
 .flag-medium{border-color:#ffaa00}
-.risk-bar{height:8px;border-radius:4px;margin:4px 0}
-.risk-critical{background:#ff4444}
-.risk-high{background:#ff8800}
-.risk-medium{background:#ffaa00}
-.risk-low{background:#4ECDC4}
 .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:bold}
 .badge-person{background:#FF6B6B;color:#111}
 .badge-account{background:#4ECDC4;color:#111}
@@ -107,24 +102,22 @@ a{color:#4ECDC4}
   </div>
   {% endfor %}
   {% else %}
-  <p class="empty">No flags. Graph is clean.</p>
+  <p class="empty">No flags matched in the collected data.</p>
   {% endif %}
 </div>
 
-<!-- Risk Scores -->
-<h2>Risk Scores</h2>
+<!-- Verified Indicators -->
+<h2>Verified Indicators</h2>
 <div class="card">
-  {% if risk_scores %}
-  {% for r in risk_scores %}
+  {% if indicator_rows %}
+  {% for r in indicator_rows %}
   <div>
     <strong>{{ r.node[:30] }}</strong>
-    <span class="badge badge-{{ r.risk_level|lower }}">{{ r.risk_score }}/100 ({{ r.risk_level }})</span>
-    <div class="risk-bar risk-{{ r.risk_level|lower }}" style="width:{{ r.risk_score }}%"></div>
-    {% for e in r.evidence %}<div style="color:#888;font-size:12px">— {{ e }}</div>{% endfor %}
+    {% for e in r.indicators %}<div style="color:#888;font-size:12px">— {{ e }}</div>{% endfor %}
   </div>
   {% endfor %}
   {% else %}
-  <p class="empty">No risk scores computed.</p>
+  <p class="empty">No indicators verified in the collected data. This is not a safety judgement.</p>
   {% endif %}
 </div>
 

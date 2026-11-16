@@ -8,7 +8,7 @@ from pyvis.network import Network
 
 from .graph import OSINTGraph
 from .db import EvidenceDB
-from .analysis import detect_bad_actor_patterns, calculate_risk_score, red2_campaign
+from .analysis import detect_bad_actor_patterns, collect_indicators, red2_campaign
 
 app = Flask(__name__)
 
@@ -56,9 +56,9 @@ def api_analysis_flags():
     return jsonify(detect_bad_actor_patterns(graph))
 
 
-@app.route("/api/analysis/risk/<node_id>")
-def api_analysis_risk(node_id):
-    result = calculate_risk_score(graph, node_id)
+@app.route("/api/analysis/indicators/<node_id>")
+def api_analysis_indicators(node_id):
+    result = collect_indicators(graph, node_id)
     return jsonify(result or {"error": "node not found"})
 
 
@@ -87,14 +87,13 @@ def dossier():
     flags = detect_bad_actor_patterns(graph)
     removal = [e for e in evidence_rows if e.get("notes") == "REMOVAL_REQUESTED"]
 
-    # Risk scores for all person nodes
-    risk_scores = []
+    # Verified indicators for person/account/email nodes
+    indicator_rows = []
     for n, data in graph.graph.nodes(data=True):
         if data.get("type") in ("person", "account", "email"):
-            r = calculate_risk_score(graph, n)
-            if r:
-                risk_scores.append(r)
-    risk_scores.sort(key=lambda x: x["risk_score"], reverse=True)
+            r = collect_indicators(graph, n)
+            if r and r["indicators"]:
+                indicator_rows.append(r)
 
     nodes_by_type = {}
     for n, data in graph.graph.nodes(data=True):
@@ -106,7 +105,7 @@ def dossier():
         stats=stats,
         flags=flags,
         removal=removal,
-        risk_scores=risk_scores,
+        indicator_rows=indicator_rows,
         nodes_by_type=nodes_by_type,
     )
 

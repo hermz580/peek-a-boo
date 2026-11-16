@@ -37,8 +37,8 @@ def main():
     rc.add_argument("--output-dir", help="Output directory (default: RED2_LAB_DIR/campaigns)")
 
     # risk
-    risk = sub.add_parser("risk", help="Risk score a node")
-    risk.add_argument("node_id", help="Node to score")
+    risk = sub.add_parser("risk", help="List verified indicators for a node")
+    risk.add_argument("node_id", help="Node to inspect")
 
     # web
     web = sub.add_parser("web", help="Launch the Flask web dashboard")
@@ -52,7 +52,7 @@ def main():
     # Lazy imports so CLI stays fast for simple queries
     from peekaboo.graph import OSINTGraph
     from peekaboo.db import EvidenceDB
-    from peekaboo.analysis import detect_bad_actor_patterns, calculate_risk_score, red2_campaign
+    from peekaboo.analysis import detect_bad_actor_patterns, collect_indicators, red2_campaign
     from peekaboo.sources import get_whois, get_dns_records, search_usernames, check_breaches, geoip_lookup
 
     graph = OSINTGraph()
@@ -141,10 +141,12 @@ def main():
         print(f"  Targets: {campaign['total_targets']}")
 
     elif args.command == "risk":
-        result = calculate_risk_score(graph, args.node_id)
+        result = collect_indicators(graph, args.node_id)
         if result:
-            print(f"Risk for {result['node']}: {result['risk_score']}/100 ({result['risk_level']})")
-            for ev in result["evidence"]:
+            print(f"Indicators for {result['node']}:")
+            if not result["indicators"]:
+                print("  None verified (this does not mean the node is safe)")
+            for ev in result["indicators"]:
                 print(f"  - {ev}")
         else:
             print(f"Node '{args.node_id}' not found")
